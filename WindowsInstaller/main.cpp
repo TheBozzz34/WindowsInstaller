@@ -201,7 +201,6 @@ NewFrame::NewFrame()
     mainSizer->Add(install_button, 0, wxALIGN_CENTER | wxALL, 10);
     mainSizer->Add(set_location, 0, wxALIGN_CENTER | wxALL, 5);
 
-
     SetSizerAndFit(mainSizer);
 
 
