@@ -5,8 +5,7 @@
 #include <curl/curl.h>
 #include <thread>
 #include <filesystem>
-#include <boost/filesystem.hpp>
-
+#include <future>
 
 
 class BinaryFileDownloader
@@ -103,7 +102,7 @@ public:
     void OnSetButtonClick(wxCommandEvent& event);
     void OnCheckBoxClicked(wxCommandEvent& event);
     void OnExit(wxCommandEvent& event);
-
+    void OnDownloadComplete(wxThreadEvent& event);
 
 
 private:
@@ -113,6 +112,7 @@ private:
     wxTextCtrl* statusCtrl;
     wxCheckBox* accept_checkbox;
     wxGauge* gauge;
+    std::thread downloadThread;
 };
 
 class WindowsInstallerApp : public wxApp
@@ -197,8 +197,8 @@ NewFrame::NewFrame()
 
     install_button->Enable(false);
 
-    mainSizer->AddStretchSpacer(); 
-    mainSizer->Add(install_button, 0, wxALIGN_CENTER | wxALL, 10); 
+    mainSizer->AddStretchSpacer();
+    mainSizer->Add(install_button, 0, wxALIGN_CENTER | wxALL, 10);
     mainSizer->Add(set_location, 0, wxALIGN_CENTER | wxALL, 5);
 
 
@@ -214,6 +214,7 @@ NewFrame::NewFrame()
     Bind(wxEVT_BUTTON, &NewFrame::OnInstallButtonClick, this, ID_Install_Button);
     Bind(wxEVT_BUTTON, &NewFrame::OnSetButtonClick, this, ID_Set_Location);
     Bind(wxEVT_CHECKBOX, &NewFrame::OnCheckBoxClicked, this, ID_Accept_CheckBox);
+    Bind(wxEVT_THREAD, &NewFrame::OnDownloadComplete, this, ID_DOWNLOAD_COMPLETE);
 
 
     wxWindow::SetInitialSize(wxSize(700, 500));
@@ -221,13 +222,13 @@ NewFrame::NewFrame()
 
 void NewFrame::OnAbout(wxCommandEvent& event)
 {
-    wxMessageBox("This is a wxWidgets Hello World example",
-        "About Hello World", wxOK | wxICON_INFORMATION);
+    wxMessageBox("This is a simple windows application installer, written by Sadan#9264",
+        "About This App", wxOK | wxICON_INFORMATION);
 }
 
 void NewFrame::OnHello(wxCommandEvent& event)
 {
-    
+
 }
 
 void NewFrame::OnInstallButtonClick(wxCommandEvent& event)
@@ -240,26 +241,36 @@ void NewFrame::OnInstallButtonClick(wxCommandEvent& event)
 
     install_button->Enable(false);
     accept_checkbox->Enable(false);
+    set_location->Enable(false);
 
-    BinaryFileDownloader downloader(gauge);
-    std::string url = "https://releases.ubuntu.com/22.04.2/ubuntu-22.04.2-desktop-amd64.iso";
-    std::string destination = "F:/ubuntu-22.04.2-desktop-amd64.iso";
-    const std::string filePath = destination;
-    if (boost::filesystem::exists(filePath)) {
-        
-    }
-    else {
-        
-    }
-    bool success = downloader.DownloadFile(url, destination);
-    if (success)
-    {
-        
-    }
-    else
-    {
-        wxMessageBox("There was an error downloading required files", "Error", wxOK | wxICON_ERROR);
-      
+    
+    downloadThread = std::thread([this]() {
+         BinaryFileDownloader downloader(gauge);
+         std::string url = "https://releases.ubuntu.com/22.04.2/ubuntu-22.04.2-desktop-amd64.iso";
+         std::string destination = "F:/ubuntu-22.04.2-desktop-amd64.iso";
+         bool success = downloader.DownloadFile(url, destination);
+
+         // Notify the main thread when the download is complete.
+         wxThreadEvent* event = new wxThreadEvent(wxEVT_THREAD, ID_DOWNLOAD_COMPLETE);
+         event->SetString(success ? "Download successful" : "Download failed");
+         wxQueueEvent(this, event);
+     });
+   
+    
+
+    
+}
+
+void NewFrame::OnDownloadComplete(wxThreadEvent& event)
+{
+    /*
+    std::string message = event.GetString();
+    std::cout << message << std::endl;
+    */
+
+    // Cleanup the download thread
+    if (downloadThread.joinable()) {
+        downloadThread.join();
     }
 }
 
@@ -279,6 +290,7 @@ void NewFrame::OnCheckBoxClicked(wxCommandEvent& event)
 
 int WindowsInstallerApp::OnExit()
 {
+
     delete frame;
     return wxApp::OnExit();
 }
@@ -286,6 +298,6 @@ int WindowsInstallerApp::OnExit()
 
 void NewFrame::OnExit(wxCommandEvent& event)
 {
+
     Close(true);
 }
-
