@@ -205,7 +205,6 @@ NewFrame::NewFrame()
     SetSizerAndFit(mainSizer);
 
 
-
     Bind(wxEVT_MENU, &NewFrame::OnHello, this, ID_Hello);
     Bind(wxEVT_MENU, &NewFrame::OnAbout, this, wxID_ABOUT);
     Bind(wxEVT_MENU, &NewFrame::OnExit, this, wxID_EXIT);
